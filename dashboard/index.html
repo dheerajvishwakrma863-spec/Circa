@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><title>CIRCA Enterprise</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}</style></head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen">
+<div class="max-w-5xl mx-auto p-4">
+<header class="flex items-center justify-between mb-4">
+  <div><h1 class="text-2xl font-bold text-emerald-600">CIRCA</h1><p class="text-sm text-slate-500 dark:text-slate-400">Every pack has an identity. Every return has a value.</p></div>
+  <div class="flex gap-2 items-center"><span id="who" class="text-xs text-slate-500 dark:text-slate-400"></span>
+    <button id="tU" class="hidden px-3 py-1.5 rounded-lg text-sm bg-emerald-600 text-white">Scan</button>
+    <button id="tA" class="hidden px-3 py-1.5 rounded-lg text-sm bg-slate-200 dark:bg-slate-700">Brand Admin</button>
+    <button id="out" class="hidden px-3 py-1.5 rounded-lg text-sm bg-slate-200 dark:bg-slate-700" onclick="logout()">Log out</button></div>
+</header>
+<p id="conn" class="text-xs text-slate-500 dark:text-slate-400 mb-3"></p>
+
+<section id="auth" class="max-w-md mx-auto rounded-xl p-5 bg-white dark:bg-slate-800 shadow-sm hidden">
+  <h2 id="aTitle" class="font-semibold mb-3">Log in</h2>
+  <input id="nm" placeholder="Name" class="hidden w-full border rounded-lg px-3 py-2 mb-2 bg-transparent border-slate-300 dark:border-slate-600">
+  <input id="em" type="email" autocomplete="username" placeholder="Email" class="w-full border rounded-lg px-3 py-2 mb-2 bg-transparent border-slate-300 dark:border-slate-600">
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Password (10+ chars, letters and digits)" class="w-full border rounded-lg px-3 py-2 mb-3 bg-transparent border-slate-300 dark:border-slate-600">
+  <button onclick="authGo()" class="w-full py-2 rounded-lg bg-emerald-600 text-white text-sm">Continue</button>
+  <p class="text-xs mt-3"><a href="#" onclick="toggleReg();return false" id="aSwap" class="text-sky-600">Create an account</a></p>
+  <p id="aErr" class="text-sm mt-2 text-red-600" aria-live="polite"></p>
+</section>
+
+<section id="user" class="hidden">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="uCards"></div>
+  <div class="grid md:grid-cols-2 gap-3 mt-3">
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm">
+      <h2 class="font-semibold mb-2">Verify a pack</h2>
+      <div class="flex flex-wrap gap-2 mb-2">
+        <label class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm cursor-pointer">Capture / upload photo
+          <input id="file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" class="hidden"></label>
+        <button onclick="live()" class="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm">Live camera scan</button></div>
+      <video id="vid" playsinline muted class="hidden w-full rounded-lg mb-2 bg-black"></video>
+      <div class="flex gap-2"><input id="code" placeholder="or paste code CIRC-00000001-XXXXXXXXXX" class="flex-1 border rounded-lg px-3 py-2 text-sm bg-transparent border-slate-300 dark:border-slate-600">
+      <button onclick="send({code:$('code').value})" class="px-3 py-2 rounded-lg bg-slate-700 text-white text-sm">Verify</button></div>
+      <div id="res" class="text-sm mt-3 min-h-[3rem]" aria-live="polite"></div>
+    </div>
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm">
+      <h2 class="font-semibold mb-2">Token balance &amp; activity</h2>
+      <div class="flex justify-between text-sm"><span id="tier" class="font-semibold"></span><span id="next" class="text-slate-500 dark:text-slate-400"></span></div>
+      <div class="h-3 rounded-full bg-slate-200 dark:bg-slate-700 mt-2 overflow-hidden"><div id="prog" class="h-3 bg-emerald-500" style="width:0%"></div></div>
+      <ul id="log" class="text-sm space-y-1 mt-3 max-h-40 overflow-y-auto"></ul>
+      <p id="glob" class="text-xs mt-3 text-slate-500 dark:text-slate-400"></p>
+    </div>
+  </div>
+</section>
+
+<section id="admin" class="hidden">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="aCards"></div>
+  <div class="grid md:grid-cols-2 gap-3 mt-3">
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm"><h2 class="font-semibold">CO2e avoided per month (kg)</h2><div id="chart" class="flex items-end gap-2 h-40 mt-3"></div></div>
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm"><h2 class="font-semibold mb-2">Impact by product</h2>
+      <table class="w-full text-sm"><thead class="text-left text-slate-500 dark:text-slate-400"><tr><th>Product</th><th>Packs</th><th>Plastic g</th><th>CO2e g</th></tr></thead><tbody id="prod"></tbody></table></div>
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm"><h2 class="font-semibold mb-2">Add product (LCA data)</h2>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <input id="p_sku" placeholder="SKU" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="p_name" placeholder="Name" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="p_mat" placeholder="Material (PP, PET...)" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="p_w" type="number" step="0.1" placeholder="Pack weight g" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="p_rw" type="number" step="0.1" placeholder="Refill weight g" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="p_f" type="number" step="0.01" placeholder="kg CO2e per kg" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600"></div>
+      <button onclick="addProduct()" class="mt-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm">Save product</button></div>
+    <div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm"><h2 class="font-semibold mb-2">Issue serial batch</h2>
+      <div class="grid grid-cols-3 gap-2 text-sm">
+        <input id="b_sku" placeholder="SKU" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="b_id" placeholder="Batch ID" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600">
+        <input id="b_n" type="number" placeholder="Count" class="border rounded-lg px-2 py-1.5 bg-transparent border-slate-300 dark:border-slate-600"></div>
+      <div class="flex gap-2 mt-2"><button onclick="issue()" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm">Issue</button>
+      <button onclick="exportCsv()" class="px-3 py-1.5 rounded-lg bg-slate-700 text-white text-sm">Export CSV</button></div>
+      <ul id="issued" class="text-xs mt-2 space-y-1"></ul></div>
+  </div>
+  <p id="aMsg" class="text-sm mt-2" aria-live="polite"></p>
+  <p class="text-xs mt-3 text-slate-500 dark:text-slate-400">Live from the API; refreshes every 10 s. CO2e covers packaging material production only.</p>
+</section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const API=new URLSearchParams(location.search).get('api')||((['localhost','127.0.0.1',''].includes(location.hostname)&&location.port!=='8000')?'http://127.0.0.1:8000':location.origin);
+let token=sessionStorage.getItem('circa_token'), me=null, last=null, reg=false, timer=null;
+const card=(l,v,c)=>`<div class="rounded-xl p-4 bg-white dark:bg-slate-800 shadow-sm"><p class="text-xs text-slate-500 dark:text-slate-400">${l}</p><p class="text-2xl font-bold ${c}">${v}</p></div>`;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function raw(p,o={}){o.headers=Object.assign({},o.headers||{});if(token)o.headers.Authorization='Bearer '+token;
+  const r=await fetch(API+p,o);if(r.status===401&&token&&!p.startsWith('/auth/login')){logout();throw new Error('Session expired. Log in again.')}return r}
+async function api(p,o){const r=await raw(p,o);const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error?.message||'Request failed ('+r.status+')');return j}
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+function msg(t,c){$('res').innerHTML=`<p class="${c||''}">${esc(t)}</p>`}
+
+function toggleReg(){reg=!reg;$('nm').classList.toggle('hidden',!reg);$('aTitle').textContent=reg?'Create account':'Log in';$('aSwap').textContent=reg?'I have an account':'Create an account';$('pw').autocomplete=reg?'new-password':'current-password'}
+async function authGo(){$('aErr').textContent='';try{
+  const j=reg?await post('/auth/register',{name:$('nm').value,email:$('em').value,password:$('pw').value}):await post('/auth/login',{email:$('em').value,password:$('pw').value});
+  token=j.token;sessionStorage.setItem('circa_token',token);$('pw').value='';boot()}catch(e){$('aErr').textContent=e.message}}
+function logout(){token=null;me=null;sessionStorage.removeItem('circa_token');clearInterval(timer);boot()}
+async function boot(){
+  if(token){try{me=await api('/auth/me')}catch(e){token=null}}
+  $('auth').classList.toggle('hidden',!!me);$('out').classList.toggle('hidden',!me);$('tU').classList.toggle('hidden',!me);
+  $('tA').classList.toggle('hidden',!(me&&me.role==='ADMIN'));$('who').textContent=me?`${me.name} (${me.role})`:'';
+  if(!me){$('user').classList.add('hidden');$('admin').classList.add('hidden');return}
+  show(false);loadUser();clearInterval(timer);timer=setInterval(()=>{if(!$('admin').classList.contains('hidden'))loadAdmin()},10000)}
+async function loadUser(){try{const f=await api('/user/'+me.user_id+'/footprint');
+    $('uCards').innerHTML=card('Plastic saved',f.plastic_saved_g+' g','text-emerald-600')+card('CO2e avoided',f.co2_saved_g+' g','text-emerald-600')+card('Packs verified',f.packs,'text-sky-600')+card('Token balance',f.points+' pts','text-amber-600');
+    const nx=f.points<200?200:f.points<600?600:null;
+    $('tier').textContent=f.tier+' tier';$('next').textContent=nx?(nx-f.points)+' pts to next tier':'Top tier';
+    $('prog').style.width=(nx?Math.min(100,f.points/nx*100):100)+'%';
+    $('log').innerHTML=f.recent.map(r=>`<li>${esc(r.product)}: ${r.plastic_saved_g} g saved${r.points?' (+'+r.points+' pts)':' (unclaimed)'}</li>`).join('')||'<li class="text-slate-500 dark:text-slate-400">No activity yet</li>';
+    const g=await api('/metrics/public');$('glob').textContent=`Community: ${(g.plastic_saved_g/1000).toFixed(2)} kg plastic saved, ${(g.co2_saved_g/1000).toFixed(2)} kg CO2e avoided, ${g.verified_packs} packs.`}catch(e){}}
+async function send({code,file}){
+  const fd=new FormData();if(file)fd.append('image',file);if(code)fd.append('code',code);msg('Verifying...');
+  try{last=await api('/verify',{method:'POST',body:fd});
+    $('res').innerHTML=`<p class="text-emerald-600 font-semibold">Verified: ${esc(last.product)} (${esc(last.material)})</p><p>${last.plastic_saved_g} g plastic and ${last.co2_saved_g} g CO2e saved.</p><button onclick="claim()" class="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm">Claim reward</button>`;loadUser()}
+  catch(e){msg(e.message,'text-red-600')}}
+async function claim(){try{const j=await post('/rewards/claim',{transaction_id:last.transaction_id});
+  msg(`+${j.points_awarded} pts. ${j.tier} tier. Coupon ${j.coupon} (${j.discount_pct}% off)`,'text-emerald-600');loadUser()}catch(e){msg(e.message,'text-red-600')}}
+$('file').onchange=e=>{if(e.target.files[0])send({file:e.target.files[0]});e.target.value=''};
+async function live(){
+  if(!('BarcodeDetector' in window)){msg('Live scan needs Chrome/Edge/Android. Use "Capture / upload photo" instead.','text-amber-600');return}
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){msg('Camera blocked, or the page is not on HTTPS/localhost.','text-red-600');return}
+  const v=$('vid');v.srcObject=stream;v.classList.remove('hidden');await v.play();const d=new BarcodeDetector({formats:['qr_code']});
+  const t=setInterval(async()=>{try{const c=await d.detect(v);if(c.length){clearInterval(t);stream.getTracks().forEach(x=>x.stop());v.classList.add('hidden');send({code:c[0].rawValue})}}catch(_){}},400)}
+async function loadAdmin(){try{const m=await api('/metrics'),t=m.totals;
+  $('aCards').innerHTML=card('Plastic diverted',(t.plastic_saved_g/1000).toFixed(2)+' kg','text-emerald-600')+card('CO2e avoided',(t.co2_saved_g/1000).toFixed(2)+' kg','text-emerald-600')+card('Packs verified',t.verified_packs+' / '+m.serials.total,'text-sky-600')+card('Redemption rate',m.serials.redemption_rate_pct+'%','text-amber-600');
+  const mx=Math.max(1,...m.monthly.map(x=>x.co2_saved_g));
+  $('chart').innerHTML=m.monthly.map(x=>`<div class="flex-1 flex flex-col items-center justify-end h-full"><div class="w-full bg-emerald-500 rounded-t" style="height:${x.co2_saved_g/mx*85}%"></div><span class="text-[10px] mt-1">${esc(x.month.slice(2))}</span></div>`).join('')||'<p class="text-sm text-slate-500">No data yet</p>';
+  $('prod').innerHTML=m.by_product.map(p=>`<tr class="border-t border-slate-200 dark:border-slate-700"><td class="py-1">${esc(p.name)}</td><td>${p.packs}</td><td>${p.plastic_saved_g}</td><td>${p.co2_saved_g}</td></tr>`).join('')}catch(e){}}
+const am=(t,c)=>{$('aMsg').textContent=t;$('aMsg').className='text-sm mt-2 '+(c||'')};
+async function addProduct(){try{const j=await post('/admin/products',{sku:$('p_sku').value,name:$('p_name').value,material:$('p_mat').value,weight_g:+$('p_w').value,refill_weight_g:+$('p_rw').value,co2_per_kg:+$('p_f').value});am('Saved product '+j.sku,'text-emerald-600')}catch(e){am(e.message,'text-red-600')}}
+async function issue(){try{const j=await post('/admin/serials',{sku:$('b_sku').value,batch_id:$('b_id').value,count:+$('b_n').value});
+  am(`Issued ${j.issued} serials in batch ${j.batch_id}`,'text-emerald-600');
+  $('issued').innerHTML=j.sample.map(c=>`<li>${esc(c)} <a href="#" class="text-sky-600" onclick="qr('${esc(c)}');return false">[QR]</a></li>`).join('');loadAdmin()}catch(e){am(e.message,'text-red-600')}}
+async function qr(c){const r=await raw('/admin/qr/'+c+'.png');window.open(URL.createObjectURL(await r.blob()))}
+async function exportCsv(){try{const r=await raw('/admin/serials/export?batch_id='+encodeURIComponent($('b_id').value));if(!r.ok)throw new Error('Export failed');
+  const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download=($('b_id').value||'batch')+'.csv';a.click()}catch(e){am(e.message,'text-red-600')}}
+function show(a){$('user').classList.toggle('hidden',a);$('admin').classList.toggle('hidden',!a);
+  $('tU').className='px-3 py-1.5 rounded-lg text-sm '+(a?'bg-slate-200 dark:bg-slate-700':'bg-emerald-600 text-white');
+  $('tA').className='px-3 py-1.5 rounded-lg text-sm '+(a?'bg-emerald-600 text-white':'bg-slate-200 dark:bg-slate-700');if(a)loadAdmin()}
+$('tU').onclick=()=>show(false);$('tA').onclick=()=>show(true);
+$('conn').textContent='API: '+API;
+api('/health').catch(()=>{$('conn').textContent='Cannot reach API at '+API+' (add ?api=https://your-api-url)';$('conn').className='text-xs text-red-600 mb-3'});
+boot();
+</script></body></html>
